@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Панель управления</title>
+<meta name="theme-color" content="#08090a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23c8ff3d'/%3E%3Ctext x='50' y='72' font-family='monospace' font-weight='700' font-size='58' text-anchor='middle' fill='%230a0d05'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="adm">
+
+<header class="adm__bar">
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true">₽</span>
+      <span id="brandName">PAYLOG</span>
+      <span class="adm__badge">admin</span>
+    </a>
+    <div class="adm__right">
+      <a class="btn btn--sm btn--ghost" href="index.html" target="_blank" rel="noopener">Открыть сайт</a>
+      <button class="btn btn--sm btn--ghost hidden" id="logoutBtn" type="button">Выйти</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ LOGIN ============ -->
+<main class="login" id="loginView">
+  <div class="login__card">
+    <h1>Вход в панель</h1>
+    <p>Панель пишет статьи прямо в репозиторий GitHub. Токен хранится только на этом устройстве.</p>
+
+    <form id="loginForm" novalidate>
+      <div class="grid2">
+        <div class="field">
+          <label for="ghOwner">GitHub логин</label>
+          <input id="ghOwner" name="owner" autocomplete="username" placeholder="username" required>
+        </div>
+        <div class="field">
+          <label for="ghRepo">Репозиторий</label>
+          <input id="ghRepo" name="repo" autocomplete="off" placeholder="paylog" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="ghToken">Personal Access Token</label>
+        <input id="ghToken" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_… или ghp_…" required>
+        <small>Нужен токен с правом <b>Contents: read &amp; write</b> на этот репозиторий. Он не уходит никуда, кроме api.github.com.</small>
+      </div>
+
+      <div class="field">
+        <label for="ghBranch">Ветка</label>
+        <input id="ghBranch" name="branch" value="main" autocomplete="off">
+      </div>
+
+      <button class="btn btn--primary" type="submit" style="width:100%" id="loginBtn">Проверить и войти</button>
+      <p class="status" id="loginStatus" role="status"></p>
+
+      <div class="login__hint">
+        Создать токен: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a><br>
+        Repository access → только этот репозиторий · Permissions → Contents: Read and write.
+      </div>
+    </form>
+  </div>
+</main>
+
+<!-- ============ DASHBOARD ============ -->
+<main class="dash wrap hidden" id="appView">
+  <div class="dash__head">
+    <div>
+      <p class="overline">Управление блогом</p>
+      <h1>Статьи и настройки</h1>
+    </div>
+    <div class="rowline">
+      <div class="dash__stats" id="dashStats"></div>
+      <button class="btn btn--sm btn--primary" id="newPostBtn" type="button">+ Новая статья</button>
+    </div>
+  </div>
+
+  <div class="adm-tabs" role="tablist">
+    <button class="adm-tab" role="tab" aria-selected="true" data-tab="list" id="tabList">Статьи</button>
+    <button class="adm-tab" role="tab" aria-selected="false" data-tab="settings" id="tabSettings">Настройки сайта</button>
+    <button class="adm-tab" role="tab" aria-selected="false" data-tab="help" id="tabHelp">Памятка</button>
+  </div>
+
+  <!-- list -->
+  <section class="panel" id="panelList" role="tabpanel" aria-labelledby="tabList">
+    <div class="rowline" style="margin-bottom:14px">
+      <input id="admSearch" type="search" placeholder="Поиск по статьям…"
+        style="flex:1;min-width:200px;background:var(--surface-3);border:1px solid var(--line);border-radius:10px;padding:11px 14px;outline:none">
+      <button class="btn btn--sm" id="refreshBtn" type="button">Обновить</button>
+    </div>
+    <div class="plist" id="postList"></div>
+    <p class="status" id="listStatus" role="status"></p>
+  </section>
+
+  <!-- editor -->
+  <section class="panel hidden" id="panelEditor" role="tabpanel">
+    <div class="editor">
+      <div class="editor__top">
+        <h2 id="editorTitle">Новая статья</h2>
+        <span class="chip mono" id="editorChip">draft</span>
+      </div>
+
+      <form id="postForm" novalidate>
+        <div class="field">
+          <label for="fTitle">Заголовок *</label>
+          <input id="fTitle" required placeholder="Яндекс Задания: сколько реально выходит в месяц">
+          <small>Без точки в конце. Пиши конкретику, а не «заработок в интернете».</small>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="fSlug">Адрес (slug) *</label>
+            <input id="fSlug" required placeholder="yandex-zadaniya">
+            <small>Латиница, дефисы. Формируется из заголовка автоматически.</small>
+          </div>
+          <div class="field">
+            <label for="fCategory">Категория</label>
+            <input id="fCategory" list="catList" placeholder="Опросы">
+            <datalist id="catList"></datalist>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fCover">Обложка (URL картинки)</label>
+          <div class="cover-preview" id="coverPreview">Нет обложки</div>
+          <input id="fCover" placeholder="https://…/cover.jpg">
+          <div class="rowline" style="margin-top:8px">
+            <label class="btn btn--sm" style="cursor:pointer">
+              Загрузить файл
+              <input id="coverFile" type="file" accept="image/*" class="hidden">
+            </label>
+            <span class="status" id="uploadStatus"></span>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="fVideo">Видео (YouTube / VK / RuTube / .mp4)</label>
+            <input id="fVideo" placeholder="https://youtu.be/…">
+          </div>
+          <div class="field">
+            <label for="fDate">Дата</label>
+            <input id="fDate" type="date">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fExcerpt">Краткое описание *</label>
+          <textarea id="fExcerpt" required placeholder="1–2 предложения: что за платформа, сколько платят, в чём подвох."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="fBody">Текст статьи *</label>
+          <textarea id="fBody" class="tall" required placeholder="## Что это&#10;&#10;Текст…&#10;&#10;- пункт списка&#10;- пункт списка&#10;&#10;> совет"></textarea>
+          <small>Простая разметка: <b>##</b> заголовок, <b>###</b> подзаголовок, <b>-</b> список, <b>1.</b> нумерация, <b>&gt;</b> цитата, <b>**жирный**</b>, <b>[текст](ссылка)</b>.</small>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="fRef">Реф-ссылка</label>
+            <input id="fRef" placeholder="https://platform.ru/?ref=твой_код">
+            <small>Пусто = блок с кнопкой не покажется.</small>
+          </div>
+          <div class="field">
+            <label for="fPayout">Выплата (текст)</label>
+            <input id="fPayout" placeholder="1 500 – 4 000 ₽">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fRefNote">Что делать после перехода</label>
+          <textarea id="fRefNote" placeholder="Заполни профиль целиком, иначе будешь ловить отсевы. Минималка на вывод 500 ₽."></textarea>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="fDifficulty">Сложность</label>
+            <select id="fDifficulty">
+              <option>Легко</option>
+              <option>Средне</option>
+              <option>Сложно</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fTime">Время</label>
+            <input id="fTime" placeholder="20–30 мин/день">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fTags">Теги (через запятую)</label>
+          <input id="fTags" placeholder="опросы, вывод на карту, без опыта">
+        </div>
+
+        <div class="rowline" style="gap:22px;margin:8px 0 4px">
+          <label class="rowline" style="gap:8px;font-size:.9rem;cursor:pointer">
+            <input id="fPublished" type="checkbox" checked style="width:18px;height:18px;accent-color:#c8ff3d"> Опубликовано
+          </label>
+          <label class="rowline" style="gap:8px;font-size:.9rem;cursor:pointer">
+            <input id="fFeatured" type="checkbox" style="width:18px;height:18px;accent-color:#c8ff3d"> Главная статья
+          </label>
+        </div>
+
+        <div class="editor__actions">
+          <button class="btn btn--primary" type="submit" id="saveBtn">Сохранить и опубликовать</button>
+          <button class="btn" type="button" id="cancelBtn">Отмена</button>
+          <button class="btn btn--danger" type="button" id="deleteBtn" style="margin-left:auto">Удалить</button>
+        </div>
+        <p class="status" id="saveStatus" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- settings -->
+  <section class="panel hidden" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings">
+    <div class="editor">
+      <form id="siteForm">
+        <div class="grid2">
+          <div class="field">
+            <label for="sTitle">Название сайта</label>
+            <input id="sTitle" placeholder="PAYLOG">
+          </div>
+          <div class="field">
+            <label for="sTagline">Подзаголовок (в футере)</label>
+            <input id="sTagline" placeholder="Журнал заработка на сайтах и приложениях">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sDesc">SEO-описание</label>
+          <textarea id="sDesc" placeholder="Разборы сайтов и приложений, где реально платят…"></textarea>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="sHeroTitle">Заголовок на главной</label>
+            <input id="sHeroTitle" placeholder="Заработок на сайтах и приложениях">
+          </div>
+          <div class="field">
+            <label for="sHeroAccent">Акцентное слово</label>
+            <input id="sHeroAccent" placeholder="без воды">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sHeroSub">Подзаголовок на главной</label>
+          <textarea id="sHeroSub" placeholder="Разбираю платформы, где реально платят…"></textarea>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="sTelegram">Ссылка Telegram</label>
+            <input id="sTelegram" placeholder="https://t.me/yourchannel">
+          </div>
+          <div class="field">
+            <label for="sTelegramLabel">Подпись ссылки</label>
+            <input id="sTelegramLabel" placeholder="Телеграм-канал">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sEmail">E-mail для связи</label>
+          <input id="sEmail" type="email" placeholder="mail@example.com">
+        </div>
+
+        <div class="field">
+          <label for="sDisclaimer">Дисклеймер о доходах</label>
+          <textarea id="sDisclaimer" placeholder="Суммы — ориентир, а не гарантия дохода…"></textarea>
+        </div>
+
+        <div class="editor__actions">
+          <button class="btn btn--primary" type="submit" id="saveSiteBtn">Сохранить настройки</button>
+        </div>
+        <p class="status" id="siteStatus" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- help -->
+  <section class="panel hidden" id="panelHelp" role="tabpanel" aria-labelledby="tabHelp">
+    <div class="editor prose" style="font-size:.95rem">
+      <h2 style="text-transform:none;font-size:1.2rem">Как это работает</h2>
+      <p>Панель не хранит статьи у себя — она коммитит файл <code>data/posts.json</code> в твой репозиторий на GitHub. GitHub Pages пересобирает сайт за 30–90 секунд.</p>
+      <ul>
+        <li><b>Новая статья</b> — заполни поля и нажми «Сохранить». Сайт обновится сам.</li>
+        <li><b>Черновик</b> — сними галочку «Опубликовано», статью никто не увидит, но текст сохранится.</li>
+        <li><b>Главная</b> — одна статья с галочкой «Главная статья» показывается блоком сверху.</li>
+        <li><b>Реф-ссылка</b> — вставь партнёрскую ссылку в поле, и на странице появится кнопка перехода.</li>
+        <li><b>Видео</b> — вставь ссылку YouTube; плеер подгружается только по клику (сайт остаётся быстрым).</li>
+      </ul>
+      <h2 style="text-transform:none;font-size:1.2rem">Безопасность</h2>
+      <p>Адрес панели нигде на сайте не указан и закрыт от поисковиков. Войти можно только с токеном GitHub — он лежит в памяти этого браузера и стирается кнопкой «Выйти». Никогда не вставляй токен на чужом устройстве.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/admin.js" defer></script>
+</body>
+</html>
