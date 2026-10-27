@@ -94,7 +94,7 @@
   color: var(--accent-ink);
   display: grid;
   place-items: center;
-  box-shadow: 0 12px 40px rgba(200, 255, 61, .28);
+  box-shadow: 0 12px 40px rgba(57, 255, 136, .28);
   transition: transform .3s var(--ease);
 }
 .video__poster:hover .video__play { transform: scale(1.08); }
@@ -157,9 +157,9 @@
 
 /* ref card */
 .refcard {
-  border: 1px solid rgba(200, 255, 61, .26);
+  border: 1px solid rgba(57, 255, 136, .26);
   border-radius: var(--r);
-  background: linear-gradient(165deg, rgba(200, 255, 61, .08), rgba(200, 255, 61, .02) 60%, transparent);
+  background: linear-gradient(165deg, rgba(57, 255, 136, .08), rgba(57, 255, 136, .02) 60%, transparent);
   padding: 24px;
   display: grid;
   gap: 14px;
@@ -169,7 +169,7 @@
 .refcard p { margin: 0; color: var(--text-2); font-size: .9rem; }
 .refcard .btn { width: 100%; }
 .refcard__note {
-  border-top: 1px solid rgba(200, 255, 61, .16);
+  border-top: 1px solid rgba(57, 255, 136, .16);
   padding-top: 14px;
   font-size: .86rem;
   color: var(--text-2);
@@ -207,3 +207,18 @@
 .related__list { border-top: 1px solid var(--line); margin-top: var(--s4); }
 
 .tagrow { display: flex; flex-wrap: wrap; gap: 7px; }
+
+/* ---------- neon pass ---------- */
+.metric--accent dd { text-shadow: 0 0 20px rgba(57, 255, 136, .4); }
+
+.refcard {
+  box-shadow: 0 0 44px rgba(57, 255, 136, .1), inset 0 1px 0 rgba(57, 255, 136, .12);
+}
+
+.post__title { text-shadow: 0 0 60px rgba(57, 255, 136, .1); }
+
+.crumbs a:hover { color: var(--accent); text-shadow: 0 0 14px rgba(57, 255, 136, .6); }
+
+.aside-card:hover { border-color: rgba(57, 255, 136, .3); }
+
+.refcard .btn--primary { box-shadow: 0 0 30px rgba(57, 255, 136, .4); }

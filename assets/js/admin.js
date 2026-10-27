@@ -69,6 +69,21 @@
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+  /* ---------- views (same free counter as the public site) ---------- */
+  const VIEW_API = 'https://abacus.jasoncameron.dev';
+  const VIEW_NS = 'erik44-paylog';
+  const viewKey = (slug) => 'p-' + String(slug || '').toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 50);
+
+  async function fetchViews(slug) {
+    try {
+      const r = await fetch(`${VIEW_API}/get/${VIEW_NS}/${viewKey(slug)}`, { cache: 'no-store' });
+      if (!r.ok) return 0;
+      const j = await r.json();
+      return typeof j.value === 'number' ? j.value : 0;
+    } catch (e) { return null; }
+  }
+
   function fmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso + (iso.length <= 10 ? 'T12:00:00' : ''));
@@ -172,7 +187,7 @@
   /* ---------- tabs ---------- */
 
   function selectTab(name) {
-    const map = { list: 'panelList', settings: 'panelSettings', help: 'panelHelp', editor: 'panelEditor' };
+    const map = { list: 'panelList', settings: 'panelSettings', views: 'panelViews', help: 'panelHelp', editor: 'panelEditor' };
     Object.values(map).forEach((id) => $(id).classList.add('hidden'));
     $(map[name]).classList.remove('hidden');
 
@@ -266,6 +281,49 @@
         if (btn.dataset.act === 'del') removePost(p);
       });
     });
+  }
+
+  /* ---------- views tab ---------- */
+
+  async function loadViews() {
+    const box = $('viewsList');
+    const sum = $('viewsSummary');
+    status($('listStatus'), '');
+    box.innerHTML = '<p class="status">Считаю просмотры…</p>';
+
+    const posts = state.posts.posts.slice();
+    const counts = await Promise.all(posts.map((p) => fetchViews(p.slug)));
+    const failed = counts.some((c) => c === null);
+
+    const rows = posts.map((p, i) => ({ p, n: counts[i] || 0 }))
+      .sort((a, b) => b.n - a.n);
+    const total = rows.reduce((acc, r) => acc + r.n, 0);
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    const published = rows.filter((r) => r.p.published !== false);
+    const avg = published.length ? Math.round(total / published.length) : 0;
+
+    sum.innerHTML = `<span><b>${total}</b> просмотров всего</span>
+      <span><b>${avg}</b> в среднем на статью</span>
+      <span><b>${rows[0] ? esc(rows[0].p.title).slice(0, 28) + (rows[0].p.title.length > 28 ? '…' : '') : '—'}</b> лидер</span>`;
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="empty"><strong>Статей пока нет</strong>Создай статью — счётчик появится автоматически.</div>';
+      return;
+    }
+
+    box.innerHTML = `<div class="vlist">${rows.map((r, i) => `
+      <div class="vitem">
+        <span class="vitem__rank">${String(i + 1).padStart(2, '0')}</span>
+        <span class="vitem__main">
+          <span class="vitem__title">${esc(r.p.title)}</span>
+          <span class="vbar"><i style="width:${Math.max(2, Math.round(r.n / max * 100))}%"></i></span>
+        </span>
+        <span class="vitem__n">${r.n}</span>
+      </div>`).join('')}</div>`;
+
+    if (failed) {
+      box.insertAdjacentHTML('beforeend', '<p class="status err">Часть цифр не загрузилась — проверь соединение и нажми «Обновить цифры».</p>');
+    }
   }
 
   /* ---------- editor ---------- */
@@ -581,6 +639,7 @@
     });
 
     $('refreshBtn').addEventListener('click', () => loadAll());
+    $('reloadViewsBtn').addEventListener('click', loadViews);
     $('admSearch').addEventListener('input', (e) => { state.query = e.target.value; renderList(); });
 
     $('coverFile').addEventListener('change', (e) => uploadCover(e.target.files[0]));
@@ -599,6 +658,7 @@
     document.querySelectorAll('.adm-tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         if (tab.dataset.tab === 'settings') { selectTab('settings'); return; }
+        if (tab.dataset.tab === 'views') { selectTab('views'); loadViews(); return; }
         if (tab.dataset.tab === 'help') { selectTab('help'); return; }
         if (!$('panelEditor').classList.contains('hidden') && state.dirty) {
           if (!confirm('Несохранённые изменения будут потеряны. Выйти?')) return;

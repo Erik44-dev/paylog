@@ -13,6 +13,63 @@
 
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
+  /* ---------- view counter (abacus.jasoncameron.dev — free, no key) ---------- */
+  const VIEW_API = 'https://abacus.jasoncameron.dev';
+  const VIEW_NS = 'erik44-paylog';
+
+  const viewKey = (slug) => 'p-' + String(slug || '').toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 50);
+
+  function plural(n, one, few, many) {
+    const a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  }
+
+  const fmtViews = (n) => n >= 1000 ? `${(n / 1000).toFixed(1).replace('.', ',')}k` : String(n);
+
+  async function viewCount(slug, mode) {
+    try {
+      const r = await fetch(`${VIEW_API}/${mode}/${VIEW_NS}/${viewKey(slug)}`, { cache: 'no-store' });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return typeof j.value === 'number' ? j.value : null;
+    } catch (e) { return null; }
+  }
+
+  const EYE = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+  async function hydrateViews(scope) {
+    const nodes = scope.querySelectorAll('[data-views]');
+    if (!nodes.length) return;
+    await Promise.all(Array.from(nodes).map(async (node) => {
+      const n = await viewCount(node.dataset.views, 'get');
+      if (n === null) return;
+      node.innerHTML = `${EYE}<span>${fmtViews(n)}</span>`;
+      node.title = `${n} ${plural(n, 'просмотр', 'просмотра', 'просмотров')}`;
+    }));
+  }
+
+  async function mountPostViews(slug) {
+    const host = document.getElementById('postMeta');
+    if (!host) return;
+    const key = 'paylog-viewed:' + slug;
+    let seen = false;
+    try { seen = sessionStorage.getItem(key) === '1'; } catch (e) {}
+
+    const n = await viewCount(slug, seen ? 'get' : 'hit');
+    if (!seen) { try { sessionStorage.setItem(key, '1'); } catch (e) {} }
+    if (n === null) return;
+
+    const chip = document.createElement('span');
+    chip.className = 'chip chip--views';
+    chip.innerHTML = `${EYE}<span>${fmtViews(n)}</span>`;
+    chip.title = `${n} ${plural(n, 'просмотр', 'просмотра', 'просмотров')} этой статьи`;
+    host.appendChild(chip);
+  }
+
   function fmtDate(iso) {
     if (!iso) return '';
     const d = new Date(iso + (iso.length <= 10 ? 'T12:00:00' : ''));
@@ -214,6 +271,7 @@
         <div class="rowline">
           <span class="chip chip--accent">${esc(p.category || 'Разбор')}</span>
           <span class="chip mono">${esc(p.payout || '')}</span>
+          <span class="chip chip--views" data-views="${esc(p.slug)}"></span>
         </div>
         <h3>${esc(p.title)}</h3>
         <p>${esc(p.excerpt || '')}</p>
@@ -240,6 +298,7 @@
           <span>${esc(p.difficulty || '')}</span>
           <span>·</span>
           <span>${esc(p.time || '')}</span>
+          <span class="row__views" data-views="${esc(p.slug)}"></span>
         </span>
       </span>
       <span class="row__paycell">${esc(p.payout || '')}</span>
@@ -292,6 +351,7 @@
     box.className = 'ledger';
     box.innerHTML = list.map(row).join('');
     observeReveals(box);
+    hydrateViews(box);
   }
 
   async function initHome() {
@@ -335,6 +395,7 @@
     if (feat && featured) {
       feat.innerHTML = featuredCard(featured);
       observeReveals(feat);
+      hydrateViews(feat);
     } else if (featSec) {
       featSec.remove();
     }
@@ -406,7 +467,7 @@
       </nav>
 
       <header class="post__head">
-        <div class="rowline" style="margin-bottom:16px">
+        <div class="rowline" id="postMeta" style="margin-bottom:16px">
           <span class="chip chip--accent">${esc(p.category || 'Разбор')}</span>
           <span class="mono muted" style="font-size:.76rem">${fmtDate(p.date)}</span>
         </div>
@@ -462,6 +523,7 @@
 
     wireVideo(root);
     observeReveals(root);
+    mountPostViews(p.slug);
   }
 
   /* ---------------- boot ---------------- */
