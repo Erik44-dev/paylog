@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /assets/uploads/
+Sitemap: https://erik44-dev.github.io/paylog/sitemap.xml
